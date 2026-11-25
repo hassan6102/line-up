@@ -1,0 +1,18 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAdmin() { return request.auth != null && request.auth.token.admin == true; }
+
+    // الصور تُقرأ علناً (تظهر في الموقع). الرفع والحذف للمدير فقط، مجلدات وأسماء ملفات وأنواع وأحجام محددة.
+    match /{folder}/{fileName} {
+      allow read: if true;
+      allow create: if isAdmin()
+        && folder in ['doctors', 'services', 'packages', 'testimonials', 'gallery', 'faqs', 'site']
+        && fileName.matches('^[0-9]{10,16}_[a-z0-9]{1,10}\\.(webp|png|jpg)$')
+        && request.resource.size > 0 && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+      allow update: if false;   // لا يُستبدل ملف موجود؛ يُرفع ملف جديد باسم جديد
+      allow delete: if isAdmin();
+    }
+  }
+}
